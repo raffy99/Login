@@ -90,11 +90,16 @@ class LoginLoginController extends LoginController {
         
         /* make sure to strip out logout GET parameter to prevent ghost logout */
         $logoutKey = $this->getProperty('logoutKey','logout');
-        if (!$redirectToPrior) {
-            $phs['request_uri'] = str_replace(array('?service='.$logoutKey,'&service='.$logoutKey,'&amp;service='.$logoutKey),'',$_SERVER['REQUEST_URI']);
-        } else {
-            $phs['request_uri'] = str_replace(array('?service='.$logoutKey,'&service='.$logoutKey,'&amp;service='.$logoutKey),'',$_SERVER['HTTP_REFERER']);
-        }
+	    if (!$redirectToPrior) {
+		    $phs['request_uri'] = str_replace(array('?service='.$logoutKey,'&service='.$logoutKey,'&amp;service='.$logoutKey),'',$_SERVER['REQUEST_URI']);
+	    } else {
+		    if (isset($_SERVER['HTTP_REFERER']) && $_SERVER['HTTP_REFERER'] != ''){
+			    $phs['request_uri'] = str_replace(array('?service='.$logoutKey,'&service='.$logoutKey,'&amp;service='.$logoutKey),'',$_SERVER['HTTP_REFERER']);
+		    }else{
+			    $phs['request_uri'] = str_replace(array('?service='.$logoutKey,'&service='.$logoutKey,'&amp;service='.$logoutKey),'',$_SERVER['REQUEST_URI']);
+		    }
+
+	    }
 
         $phs = $this->escapePlaceholders($phs);
 
@@ -405,18 +410,22 @@ class LoginLoginController extends LoginController {
         $loginResourceId = $this->getProperty('loginResourceId',$redirectBack);
         /* login posthooks succeeded, now redirect */
 
-        if (!empty($loginResourceId)) {
-            $loginResourceParams = $this->getProperty('loginResourceParams',$redirectBackParams);
-            if (!empty($loginResourceParams) && !is_array($loginResourceParams)) {
-                $loginResourceParams = $this->modx->fromJSON($loginResourceParams);
-            }
-            $url = $this->modx->makeUrl($loginResourceId,'',$loginResourceParams,'full');
-            $this->modx->sendRedirect($url);
-        } elseif (!empty($responseArray) && !empty($responseArray['url'])) {
-            $this->modx->sendRedirect($responseArray['url']);
-        } else {
-            $this->modx->sendRedirect($this->modx->getOption('site_url'));
-        }
+	    $curUlr = $this->modx->makeUrl($this->modx->resource->get('id'), "", "", "full");
+	    if (!empty($responseArray) && !empty($responseArray['url'])) {
+		    if ($responseArray['url'] != $curUlr || empty($loginResourceId) ){
+			    $this->modx->sendRedirect($responseArray['url']);
+		    }
+	    }
+	    if (!empty($loginResourceId)) {
+		    $loginResourceParams = $this->getProperty('loginResourceParams',$redirectBackParams);
+		    if (!empty($loginResourceParams) && !is_array($loginResourceParams)) {
+			    $loginResourceParams = $this->modx->fromJSON($loginResourceParams);
+		    }
+		    $url = $this->modx->makeUrl($loginResourceId,'',$loginResourceParams, 'full');
+		    $this->modx->sendRedirect($url);
+	    } else {
+		    $this->modx->sendRedirect($this->modx->getOption('site_url'));
+	    }
     }
 
     public function logout() {
